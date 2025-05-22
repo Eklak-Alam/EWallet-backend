@@ -1,4 +1,5 @@
 package com.Ewallet.services;
+
 import com.Ewallet.entities.Bank;
 import com.Ewallet.entities.User;
 import com.Ewallet.entities.Wallet;
@@ -9,7 +10,6 @@ import com.Ewallet.repos.UserRepo;
 import com.Ewallet.repos.WalletRepo;
 import com.Ewallet.response.UserResponse;
 import com.Ewallet.request.UserRequest;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,12 +18,17 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepo userRepository;
-    private final BankRepo bankRepository;
-    private final WalletRepo walletRepository;
+    private UserRepo userRepository;
+    private BankRepo bankRepository;
+    private WalletRepo walletRepository;
+
+    public UserService(UserRepo userRepository, BankRepo bankRepository, WalletRepo walletRepository) {
+        this.userRepository = userRepository;
+        this.bankRepository = bankRepository;
+        this.walletRepository = walletRepository;
+    }
 
     @Transactional
     public UserResponse createUserWithAccounts(UserRequest userRequest) {
@@ -63,54 +68,58 @@ public class UserService {
     }
 
     private User convertToUserEntity(UserRequest userRequest) {
-        return User.builder()
-                .name(userRequest.getName())
-                .userName(userRequest.getUserName())
-                .email(userRequest.getEmail())
-                .phoneNumber(userRequest.getCountryCode() + userRequest.getPhoneNumber())
-                .role(User.Role.USER) // Default role
-                .build();
+        User user = new User();
+        user.setName(userRequest.getName());
+        user.setUserName(userRequest.getUserName());
+        user.setEmail(userRequest.getEmail());
+        user.setPhoneNumber(userRequest.getCountryCode() + userRequest.getPhoneNumber());
+        user.setRole(User.Role.USER);
+        return user;
     }
+
 
     private Bank createBankAccount(User user) {
-        return Bank.builder()
-                .accountNumber("ACCT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12))
-                .phoneNumber(user.getPhoneNumber())
-                .balance(getDefaultBalanceForCountry(user.getPhoneNumber().substring(0, 3))) // First 3 chars are country code
-                .currency(getCurrencyForCountry(user.getPhoneNumber().substring(0, 3)))
-                .user(user)
-                .build();
+        Bank bank = new Bank();
+        bank.setAccountNumber("ACCT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+        bank.setPhoneNumber(user.getPhoneNumber());
+        bank.setBalance(getDefaultBalanceForCountry(user.getPhoneNumber().substring(0, 3))); // First 3 chars are country code
+        bank.setCurrency(getCurrencyForCountry(user.getPhoneNumber().substring(0, 3)));
+        bank.setUser(user);
+        return bank;
     }
+
 
     private Wallet createWallet(User user) {
-        return Wallet.builder()
-                .phoneNumber(user.getPhoneNumber())
-                .user(user)
-                .balance(0.0)
-                .currency(getCurrencyForCountry(user.getPhoneNumber().substring(0, 3)))
-                .build();
+        Wallet wallet = new Wallet();
+        wallet.setPhoneNumber(user.getPhoneNumber());
+        wallet.setUser(user);
+        wallet.setBalance(0.0);
+        wallet.setCurrency(getCurrencyForCountry(user.getPhoneNumber().substring(0, 3)));
+        return wallet;
     }
 
+
     private UserResponse convertToUserResponse(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .name(user.getName())
-                .userName(user.getUserName())
-                .email(user.getEmail())
-                .countryCode(user.getPhoneNumber().substring(0, 3)) // Extract country code
-                .phoneNumber(user.getPhoneNumber().substring(3)) // Extract phone number without country code
-                .createdOn(user.getCreatedOn())
-                .updatedOn(user.getUpdatedOn())
-                .build();
+        UserResponse response = new UserResponse();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setUserName(user.getUserName());
+        response.setEmail(user.getEmail());
+        response.setCountryCode(user.getPhoneNumber().substring(0, 3));
+        response.setPhoneNumber(user.getPhoneNumber().substring(3));
+        response.setCreatedOn(user.getCreatedOn());
+        response.setUpdatedOn(user.getUpdatedOn());
+        return response;
     }
+
 
     private double getDefaultBalanceForCountry(String countryCode) {
         return switch (countryCode) {
             case "+91" -> 100.0;  // India
-            case "+1" -> 10.0;     // USA/Canada
-            case "+44" -> 50.0;    // UK
-            case "+81" -> 1000.0;  // Japan
-            default -> 50.0;       // Default
+            case "+1" -> 1.0;     // USA/Canada
+            case "+44" -> 5.0;    // UK
+            case "+81" -> 100.0;  // Japan
+            default -> 1.0;       // Default
         };
     }
 
@@ -121,6 +130,8 @@ public class UserService {
             case "+44" -> "GBP";  // UK
             case "+81" -> "JPY";  // Japan
             case "+49" -> "EUR";  // Germany
+            case "+33" -> "FR";  // France
+            case "+86" -> "CN";  //China
             default -> "USD";     // Default
         };
     }
@@ -203,4 +214,17 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with phone: " + phone));
         return convertToUserResponse(user);
     }
+
+
+    public UserResponse getUserByUsernameAndPhone(String userName, String phoneNumber) {
+        // You decide the default country code (or make it dynamic)
+        String PhoneNumber = phoneNumber;
+
+        User user = userRepository.findByUserNameAndPhoneNumber(userName, phoneNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username and phone number"));
+
+        return convertToUserResponse(user);
+    }
+
+
 }

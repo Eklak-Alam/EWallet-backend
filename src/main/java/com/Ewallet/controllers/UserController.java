@@ -1,9 +1,8 @@
 package com.Ewallet.controllers;
 
-import com.Ewallet.response.UserResponse;
 import com.Ewallet.request.UserRequest;
+import com.Ewallet.response.UserResponse;
 import com.Ewallet.services.UserService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,17 +16,14 @@ public class UserController {
 
     private final UserService userService;
 
+    @Autowired
     public UserController(UserService userService) {
         this.userService = userService;
     }
 
-    @Autowired
-
-
     // Create User
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(
-            @Valid @RequestBody UserRequest userRequest) {
+    public ResponseEntity<UserResponse> createUser(@RequestBody UserRequest userRequest) {
         UserResponse response = userService.createUserWithAccounts(userRequest);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -48,9 +44,7 @@ public class UserController {
 
     // Update User
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponse> updateUser(
-            @PathVariable Long id,
-            @Valid @RequestBody UserRequest userRequest) {
+    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @RequestBody UserRequest userRequest) {
         UserResponse response = userService.updateUser(id, userRequest);
         return ResponseEntity.ok(response);
     }
@@ -82,4 +76,13 @@ public class UserController {
         UserResponse response = userService.getUserByPhone(phone);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/login")
+    public ResponseEntity<UserResponse> loginWithUsernameAndPhone(
+            @RequestParam String userName,
+            @RequestParam String phoneNumber
+    ) {
+        return ResponseEntity.ok(userService.getUserByUsernameAndPhone(userName, phoneNumber));
+    }
+
 }

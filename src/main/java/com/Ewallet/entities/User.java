@@ -34,6 +34,9 @@ public class User {
     @Column(nullable = false, unique = true)
     private String phoneNumber;
 
+    @Column(nullable = false)
+    private String password;  // This should store the hashed password, not plain text
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdOn;
@@ -47,9 +50,11 @@ public class User {
 
     public enum Role {
         USER,
-        ADMIN
+        ADMIN,
+        MERCHANT  // Added more roles as an example
     }
 
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -88,6 +93,14 @@ public class User {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public LocalDateTime getCreatedOn() {

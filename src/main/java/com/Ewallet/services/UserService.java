@@ -10,6 +10,7 @@ import com.Ewallet.repos.UserRepo;
 import com.Ewallet.repos.WalletRepo;
 import com.Ewallet.response.UserResponse;
 import com.Ewallet.request.UserRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,17 +24,21 @@ public class UserService {
     private UserRepo userRepository;
     private BankRepo bankRepository;
     private WalletRepo walletRepository;
+    private PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepo userRepository, BankRepo bankRepository, WalletRepo walletRepository) {
+
+    public UserService(UserRepo userRepository, BankRepo bankRepository, WalletRepo walletRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.bankRepository = bankRepository;
         this.walletRepository = walletRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
     public UserResponse createUserWithAccounts(UserRequest userRequest) {
         // Validate user doesn't exist
         validateUserDoesNotExist(userRequest);
+        userRequest.validatePasswordsMatch();
 
         // Convert UserRequest to User entity
         User user = convertToUserEntity(userRequest);
@@ -73,6 +78,7 @@ public class UserService {
         user.setUserName(userRequest.getUserName());
         user.setEmail(userRequest.getEmail());
         user.setPhoneNumber(userRequest.getCountryCode() + userRequest.getPhoneNumber());
+        user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
         user.setRole(User.Role.USER);
         return user;
     }
@@ -107,6 +113,7 @@ public class UserService {
         response.setEmail(user.getEmail());
         response.setCountryCode(user.getPhoneNumber().substring(0, 3));
         response.setPhoneNumber(user.getPhoneNumber().substring(3));
+        response.setRole(user.getRole());
         response.setCreatedOn(user.getCreatedOn());
         response.setUpdatedOn(user.getUpdatedOn());
         return response;
@@ -172,11 +179,18 @@ public class UserService {
             }
         }
 
+        if (userRequest.getPassword() != null && !userRequest.getPassword().isEmpty()) {
+            userRequest.validatePasswordsMatch();
+            existingUser.setPassword(passwordEncoder.encode(userRequest.getPassword()));
+        }
+
+
         // Update user fields
         existingUser.setName(userRequest.getName());
         existingUser.setUserName(userRequest.getUserName());
         existingUser.setEmail(userRequest.getEmail());
         existingUser.setPhoneNumber(newPhone);
+        existingUser.setPassword(passwordEncoder.encode(userRequest.getPassword()));
 
         User updatedUser = userRepository.save(existingUser);
         return convertToUserResponse(updatedUser);
